@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-
+const cors = require('cors');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -12,7 +12,7 @@ const messages = [];
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(cors());
 // Manejar conexión de usuarios con Socket.IO
 io.on('connection', (socket) => {
     console.log('Un usuario se conectó');
