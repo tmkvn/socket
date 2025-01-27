@@ -1,60 +1,54 @@
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require("@supabase/supabase-js");
 
-// Conectar a la base de datos
-const db = new sqlite3.Database('chat.db', (err) => {
-    if (err) {
-        console.error('Error al conectar con la base de datos:', err.message);
-    } else {
-        console.log('Conectado a la base de datos SQLite.');
-    }
-});
+// Configuración de Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-// Crear la tabla si no existe
-db.serialize(() => {
-    db.run(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT NOT NULL,
-      message TEXT NOT NULL,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `, (err) => {
-        if (err) {
-            console.error('Error al crear la tabla:', err.message);
-        }
-    });
-});
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    "Las variables de entorno SUPABASE_URL y SUPABASE_ANON_KEY son requeridas"
+  );
+}
 
-// Exportar funciones para operaciones con la base de datos
-const getMessages = (callback) => {
-    db.all('SELECT * FROM messages ORDER BY timestamp ASC', [], (err, rows) => {
-        if (err) {
-            console.error('Error al recuperar mensajes:', err.message);
-            callback(err, null);
-        } else {
-            callback(null, rows);
-        }
-    });
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Función para obtener mensajes
+const getMessages = async (callback) => {
+  try {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .order("timestamp", { ascending: true });
+
+    if (error) throw error;
+    callback(null, data);
+  } catch (error) {
+    console.error("Error al recuperar mensajes:", error.message);
+    callback(error, null);
+  }
 };
 
-const saveMessage = (username, message, callback) => {
-    db.run(
-        `INSERT INTO messages (username, message) VALUES (?, ?)`,
-        [username, message],
-        function (err) {
-            if (err) {
-                console.error('Error al guardar el mensaje:', err.message);
-                callback(err);
-            } else {
-                callback(null, {
-                    id: this.lastID,
-                    username,
-                    message,
-                    timestamp: new Date().toISOString(),
-                });
-            }
-        }
-    );
+// Función para guardar mensajes
+const saveMessage = async (username, message, callback) => {
+  try {
+    const { data, error } = await supabase
+      .from("messages")
+      .insert([
+        {
+          username,
+          message,
+          timestamp: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    callback(null, data);
+  } catch (error) {
+    console.error("Error al guardar el mensaje:", error.message);
+    callback(error);
+  }
 };
 
 module.exports = { getMessages, saveMessage };
