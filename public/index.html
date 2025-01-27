@@ -6,45 +6,66 @@
     <title>Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-gray-100 font-sans">
-    <!-- Encabezado -->
-    <header class="bg-blue-600 text-white py-4 text-center">
-      <h1 class="text-2xl font-bold">Chat Grupal</h1>
-    </header>
+  <body class="bg-[#36393f] font-sans min-h-screen">
+    <!-- Contenedor Principal con diseño tipo Discord -->
+    <div class="flex h-screen">
+      <!-- Barra lateral de canales (estilo Discord) -->
+      <div class="w-60 bg-[#2f3136] text-gray-300 flex flex-col">
+        <div class="p-4 border-b border-gray-700">
+          <h1 class="text-xl font-bold">Chat Grupal</h1>
+        </div>
+        <div class="p-4">
+          <div class="flex items-center space-x-2">
+            <span class="text-gray-400">#</span>
+            <span>general</span>
+          </div>
+        </div>
+      </div>
 
-    <!-- Contenedor Principal -->
-    <main class="flex flex-col items-center p-6">
-      <!-- Lista de Mensajes -->
-      <ul
-        id="messages"
-        class="w-full max-w-md bg-white p-4 rounded-lg shadow-lg mb-4 h-80 overflow-y-auto"
-      >
-        <!-- Mensajes serán añadidos aquí -->
-      </ul>
+      <!-- Área principal de chat -->
+      <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        <!-- Encabezado del canal -->
+        <header class="bg-[#36393f] border-b border-gray-700 p-4 shrink-0">
+          <div class="flex items-center">
+            <span class="text-gray-300 text-lg font-semibold"># general</span>
+          </div>
+        </header>
 
-      <!-- Formulario de Entrada -->
-      <form id="form" class="w-full max-w-md flex gap-2">
-        <input
-          id="username"
-          placeholder="Tu nombre"
-          required
-          class="flex-1 p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          id="input"
-          autocomplete="off"
-          placeholder="Escribe un mensaje..."
-          required
-          class="flex-1 p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          class="bg-blue-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Enviar
-        </button>
-      </form>
-    </main>
+        <!-- Área de mensajes -->
+        <div class="flex-1 overflow-hidden">
+          <ul id="messages" class="h-full overflow-y-auto p-4 space-y-4">
+            <!-- Mensajes serán añadidos aquí -->
+          </ul>
+        </div>
+
+        <!-- Área de entrada de mensaje -->
+        <div class="p-4 bg-[#36393f] shrink-0">
+          <form id="form" class="flex flex-col gap-4">
+            <input
+              id="username"
+              placeholder="Tu nombre"
+              required
+              class="w-full p-3 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div class="flex gap-2">
+              <input
+                id="input"
+                autocomplete="off"
+                placeholder="Enviar mensaje a #general"
+                required
+                class="flex-1 p-3 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                class="bg-[#5865f2] text-white px-6 py-2 rounded-md hover:bg-[#4752c4] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Enviar
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -58,13 +79,24 @@
       socket.on("chat history", (history) => {
         history.forEach(({ username, message, timestamp }) => {
           const li = document.createElement("li");
-          li.classList.add("mb-2", "text-sm", "text-gray-600");
-          li.textContent = `[${new Date(
-            timestamp
-          ).toLocaleTimeString()}] ${username}: ${message}`;
+          li.classList.add("flex", "items-start", "gap-2");
+          li.innerHTML = `
+            <div class="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-bold">
+              ${username.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-white">${username}</span>
+                <span class="text-xs text-gray-400">${new Date(
+                  timestamp
+                ).toLocaleTimeString()}</span>
+              </div>
+              <p class="text-gray-300">${message}</p>
+            </div>
+          `;
           messages.appendChild(li);
         });
-        messages.scrollTop = messages.scrollHeight; // Desplazar hacia abajo automáticamente
+        messages.scrollTop = messages.scrollHeight;
       });
 
       // Enviar mensaje al servidor
@@ -82,12 +114,23 @@
       // Recibir mensaje del servidor
       socket.on("chat message", ({ username, message, timestamp }) => {
         const li = document.createElement("li");
-        li.classList.add("mb-2", "text-sm", "text-gray-600");
-        li.textContent = `[${new Date(
-          timestamp
-        ).toLocaleTimeString()}] ${username}: ${message}`;
+        li.classList.add("flex", "items-start", "gap-2");
+        li.innerHTML = `
+          <div class="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-bold">
+            ${username.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-white">${username}</span>
+              <span class="text-xs text-gray-400">${new Date(
+                timestamp
+              ).toLocaleTimeString()}</span>
+            </div>
+            <p class="text-gray-300">${message}</p>
+          </div>
+        `;
         messages.appendChild(li);
-        messages.scrollTop = messages.scrollHeight; // Desplazar hacia abajo automáticamente
+        messages.scrollTop = messages.scrollHeight;
       });
     </script>
   </body>
