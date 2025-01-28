@@ -3,6 +3,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const emoji = require("node-emoji");
 const {
   getMessages,
   saveMessage,
@@ -19,6 +20,19 @@ const io = new Server(server);
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
+
+// Agregar la función de conversión de emojis después de la configuración inicial
+function convertirConEmojis(text) {
+  text = text.replace(/:\)/g, "🙂");
+  text = text.replace(/:D/g, "😁");
+  text = text.replace(/:P/g, "😛");
+  text = text.replace(/:O/g, "😲");
+  text = text.replace(/;\)/g, "😉");
+  text = text.replace(/:\(/g, "😢");
+
+  text = emoji.emojify(text);
+  return text;
+}
 
 // Manejar conexión de usuarios con Socket.IO
 io.on("connection", (socket) => {
@@ -107,9 +121,13 @@ io.on("connection", (socket) => {
     try {
       if (!socket.user) return;
 
-      const savedMessage = await saveMessage(socket.user.id, room, message);
+      const mensajeConEmojis = convertirConEmojis(message);
+      const savedMessage = await saveMessage(
+        socket.user.id,
+        room,
+        mensajeConEmojis
+      );
 
-      // Emitir a todos en la sala, incluyendo el emisor
       io.in(room).emit("chat_message", {
         username: socket.user.username,
         message: savedMessage.message,
@@ -128,10 +146,11 @@ io.on("connection", (socket) => {
     try {
       if (!socket.user) return;
 
+      const mensajeConEmojis = convertirConEmojis(message);
       const savedMessage = await savePrivateMessage(
         socket.user.id,
         receiverId,
-        message
+        mensajeConEmojis
       );
 
       // Enviar mensaje al remitente y al destinatario
@@ -142,7 +161,7 @@ io.on("connection", (socket) => {
       const messageData = {
         senderId: socket.user.id,
         senderUsername: socket.user.username,
-        message,
+        message: mensajeConEmojis,
         timestamp: savedMessage.created_at,
       };
 
