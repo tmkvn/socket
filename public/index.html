@@ -340,9 +340,13 @@
       // Mensajes privados
       function startPrivateChat(userId, username) {
         if (userId === currentUser.id) return;
+
         currentPrivateChat = { id: userId, username };
         privateChatHeader.textContent = username;
         privateChat.classList.remove("hidden");
+        privateMessages.innerHTML = ""; // Limpiar mensajes anteriores
+
+        // Solicitar historial de mensajes privados
         socket.emit("get_private_messages", userId);
       }
 
@@ -354,28 +358,90 @@
           privateMessages.innerHTML = "";
         });
 
+      // Manejar historial de mensajes privados
+      socket.on("private_messages_history", (messages) => {
+        privateMessages.innerHTML = "";
+        messages.forEach((msg) => {
+          appendPrivateMessage(
+            privateMessages,
+            msg.sender.username,
+            msg.content,
+            msg.created_at,
+            msg.sender.id === currentUser.id
+          );
+        });
+        privateMessages.scrollTop = privateMessages.scrollHeight;
+      });
+
+      // Manejar nuevos mensajes privados
+      socket.on("private_message", (message) => {
+        if (
+          currentPrivateChat &&
+          (message.sender.id === currentPrivateChat.id ||
+            message.receiver.id === currentPrivateChat.id)
+        ) {
+          appendPrivateMessage(
+            privateMessages,
+            message.sender.username,
+            message.content,
+            message.timestamp,
+            message.sender.id === currentUser.id
+          );
+          privateMessages.scrollTop = privateMessages.scrollHeight;
+        }
+      });
+
+      // Función para agregar mensajes privados
+      function appendPrivateMessage(
+        container,
+        username,
+        message,
+        timestamp,
+        isOwnMessage
+      ) {
+        const li = document.createElement("li");
+        li.classList.add("flex", "items-start", "gap-2", "mb-4");
+
+        if (isOwnMessage) {
+          li.classList.add("justify-end");
+        }
+
+        li.innerHTML = `
+          <div class="max-w-[70%] ${isOwnMessage ? "order-2" : ""}">
+            <div class="flex items-center gap-2 ${
+              isOwnMessage ? "justify-end" : ""
+            }">
+              <span class="font-semibold text-white">${username}</span>
+              <span class="text-xs text-gray-400">${new Date(
+                timestamp
+              ).toLocaleTimeString()}</span>
+            </div>
+            <div class="mt-1 p-2 rounded-lg ${
+              isOwnMessage
+                ? "bg-[#5865f2] text-white"
+                : "bg-[#40444b] text-gray-300"
+            }">
+              <p>${message}</p>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(li);
+      }
+
+      // Manejo del formulario de mensajes privados
       privateMessageForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        if (currentPrivateChat && privateMessageInput.value.trim()) {
+        const message = privateMessageInput.value.trim();
+
+        if (message && currentPrivateChat) {
           socket.emit("private_message", {
             receiverId: currentPrivateChat.id,
-            message: privateMessageInput.value,
+            message: message,
           });
           privateMessageInput.value = "";
         }
       });
-
-      socket.on(
-        "private_message",
-        ({ senderId, senderUsername, message, timestamp }) => {
-          if (
-            currentPrivateChat &&
-            (senderId === currentPrivateChat.id || senderId === currentUser.id)
-          ) {
-            appendMessage(privateMessages, senderUsername, message, timestamp);
-          }
-        }
-      );
 
       // Indicador de escritura
       let typingTimeout;

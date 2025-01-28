@@ -126,37 +126,57 @@ io.on("connection", (socket) => {
   // Mensajes privados
   socket.on("private_message", async ({ receiverId, message }) => {
     try {
-      if (!socket.user) return;
+      if (!socket.user) {
+        throw new Error("Usuario no autenticado");
+      }
 
+      // Validar que el receptor existe
       const savedMessage = await savePrivateMessage(
         socket.user.id,
         receiverId,
         message
       );
 
-      // Enviar mensaje al remitente y al destinatario
+      if (!savedMessage) {
+        throw new Error("No se pudo guardar el mensaje");
+      }
+
+      // Encontrar el socket del receptor
       const receiverSocket = Array.from(io.sockets.sockets.values()).find(
         (s) => s.user && s.user.id === receiverId
       );
 
+      // Emitir el mensaje al remitente y al destinatario
       const messageData = {
-        senderId: socket.user.id,
-        senderUsername: socket.user.username,
-        message,
+        id: savedMessage.id,
+        content: savedMessage.content,
         timestamp: savedMessage.created_at,
+        sender: savedMessage.sender,
+        receiver: savedMessage.receiver,
       };
 
+      // Enviar al remitente
       socket.emit("private_message", messageData);
+
+      // Enviar al destinatario si está conectado
       if (receiverSocket) {
         receiverSocket.emit("private_message", messageData);
       }
     } catch (error) {
-      console.error("Error al enviar mensaje privado:", error);
-      socket.emit("error", { message: "Error al enviar mensaje privado" });
+      console.error("Error detallado al enviar mensaje privado:", {
+        error: error.message,
+        stack: error.stack,
+        userId: socket.user?.id,
+        receiverId,
+      });
+      socket.emit("error", {
+        message: "Error al enviar mensaje privado",
+        details: error.message,
+      });
     }
   });
 
-  // Obtener mensajes privados
+  // Obtener historial de mensajes privados
   socket.on("get_private_messages", async (otherUserId) => {
     try {
       if (!socket.user) return;

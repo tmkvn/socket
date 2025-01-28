@@ -72,13 +72,26 @@ CREATE POLICY "Permitir inserción de mensajes a todos" ON public.messages
 -- Configurar políticas de seguridad para private_messages
 ALTER TABLE public.private_messages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Permitir lectura de mensajes privados a participantes" ON public.private_messages
-    FOR SELECT TO anon 
-    USING (auth.uid() IN (SELECT id FROM users WHERE id = sender_id OR id = receiver_id));
+-- Eliminar políticas existentes si las hay
+DROP POLICY IF EXISTS "Permitir lectura de mensajes privados a participantes" ON public.private_messages;
+DROP POLICY IF EXISTS "Permitir envío de mensajes privados" ON public.private_messages;
 
-CREATE POLICY "Permitir envío de mensajes privados" ON public.private_messages
-    FOR INSERT TO anon 
+-- Crear nuevas políticas más permisivas
+CREATE POLICY "Permitir lectura de mensajes privados" ON public.private_messages
+    FOR SELECT TO anon
+    USING (true);
+
+CREATE POLICY "Permitir inserción de mensajes privados" ON public.private_messages
+    FOR INSERT TO anon
     WITH CHECK (true);
+
+CREATE POLICY "Permitir actualización de mensajes privados" ON public.private_messages
+    FOR UPDATE TO anon
+    USING (true);
+
+CREATE POLICY "Permitir eliminación de mensajes privados" ON public.private_messages
+    FOR DELETE TO anon
+    USING (true);
 
 -- Habilitar la extensión uuid-ossp si no está habilitada
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
