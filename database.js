@@ -61,7 +61,7 @@ const getMessages = async (roomName) => {
         users (
           username
         ),
-        rooms (
+        rooms!inner (
           name
         )
       `

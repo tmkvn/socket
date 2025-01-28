@@ -283,10 +283,10 @@
         currentRoom = roomName;
         document.getElementById("currentRoom").textContent = roomName;
 
-        // Limpiar mensajes
-        messages.innerHTML = "";
+        // Limpiar mensajes existentes
+        document.getElementById("messages").innerHTML = "";
 
-        // Unirse a la nueva sala
+        // Unirse a la nueva sala y solicitar mensajes
         socket.emit("join_room", roomName);
       }
 
@@ -321,7 +321,7 @@
         }
       });
 
-      // Modificar el manejador de chat_message
+      // Modificar el manejador de chat_message para verificar la sala actual
       socket.on(
         "chat_message",
         ({ username, message, timestamp, room, senderId }) => {

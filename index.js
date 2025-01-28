@@ -54,8 +54,13 @@ io.on("connection", (socket) => {
   // Unirse a una sala
   socket.on("join_room", async (roomName) => {
     try {
-      socket.join(roomName);
+      // Obtener los mensajes antes de unirse a la sala
       const messages = await getMessages(roomName);
+
+      // Unirse a la nueva sala
+      socket.join(roomName);
+
+      // Enviar el historial de mensajes
       socket.emit("chat history", messages);
     } catch (error) {
       console.error("Error al unirse a la sala:", error);
