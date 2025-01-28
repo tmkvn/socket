@@ -3,6 +3,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const emoji = require("node-emoji");
 const {
   getMessages,
   saveMessage,
@@ -19,6 +20,20 @@ const io = new Server(server);
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
+
+// Función para convertir el mensaje con emojis
+function convertirConEmojis(text) {
+  text = text.replace(/:\)/g, "🙂");
+  text = text.replace(/:D/g, "😁");
+  text = text.replace(/:P/g, "😛");
+  text = text.replace(/:O/g, "😲");
+  text = text.replace(/;\)/g, "😉");
+  text = text.replace(/:\(/g, "😢");
+
+  text = emoji.emojify(text);
+
+  return text;
+}
 
 // Manejar conexión de usuarios con Socket.IO
 io.on("connection", (socket) => {
@@ -107,7 +122,14 @@ io.on("connection", (socket) => {
     try {
       if (!socket.user) return;
 
-      const savedMessage = await saveMessage(socket.user.id, room, message);
+      const mensajeConEmojis = convertirConEmojis(message);
+
+      const savedMessage = await saveMessage(
+        socket.user.id,
+        room,
+        socket.user.username,
+        mensajeConEmojis
+      );
 
       // Emitir a todos en la sala, incluyendo el emisor
       io.in(room).emit("chat_message", {
@@ -130,11 +152,12 @@ io.on("connection", (socket) => {
         throw new Error("Usuario no autenticado");
       }
 
-      // Validar que el receptor existe
+      const mensajeConEmojis = convertirConEmojis(message);
+
       const savedMessage = await savePrivateMessage(
         socket.user.id,
         receiverId,
-        message
+        mensajeConEmojis
       );
 
       if (!savedMessage) {
@@ -150,6 +173,9 @@ io.on("connection", (socket) => {
       const messageData = {
         id: savedMessage.id,
         content: savedMessage.content,
+        senderId: socket.user.id,
+        senderUsername: socket.user.username,
+        message: mensajeConEmojis,
         timestamp: savedMessage.created_at,
         sender: savedMessage.sender,
         receiver: savedMessage.receiver,
@@ -214,7 +240,7 @@ io.on("connection", (socket) => {
 });
 
 // Iniciar el servidor
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
