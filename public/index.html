@@ -69,7 +69,7 @@
             <div class="flex items-center space-x-2">
               <span class="text-gray-400">#</span>
               <span id="currentRoom" class="text-gray-300 text-lg font-semibold"
-                >general</span
+                >General</span
               >
             </div>
             <div
@@ -156,7 +156,7 @@
     <script>
       const socket = io();
       let currentUser = null;
-      let currentRoom = "general";
+      let currentRoom = "General";
       let currentPrivateChat = null;
 
       // Elementos DOM
@@ -204,7 +204,7 @@
         // Mostrar mensaje de bienvenida
         const welcomeMessage = {
           username: "Sistema",
-          message: `Bienvenido ${user.username}!`,
+          message: `¡Bienvenido ${user.username}!`,
           timestamp: new Date().toISOString(),
         };
         appendMessage(
@@ -213,6 +213,9 @@
           welcomeMessage.message,
           welcomeMessage.timestamp
         );
+
+        // Cargar datos iniciales
+        loadInitialData();
       });
 
       socket.on("login_error", (error) => {
@@ -271,11 +274,20 @@
       });
 
       function changeRoom(roomName) {
+        if (currentRoom === roomName) return;
+
+        // Dejar la sala actual
         socket.emit("leave_room", currentRoom);
+
+        // Actualizar la sala actual
         currentRoom = roomName;
-        socket.emit("join_room", roomName);
         document.getElementById("currentRoom").textContent = roomName;
+
+        // Limpiar mensajes
         messages.innerHTML = "";
+
+        // Unirse a la nueva sala
+        socket.emit("join_room", roomName);
       }
 
       // Manejo de usuarios
@@ -295,21 +307,35 @@
           .join("");
       });
 
-      // Mensajes públicos
+      // Modificar el envío de mensajes
       messageForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        if (messageInput.value.trim()) {
+        const message = messageInput.value.trim();
+        if (message && currentRoom) {
+          // Solo enviamos al servidor, ya no mostramos inmediatamente
           socket.emit("chat_message", {
             room: currentRoom,
-            message: messageInput.value,
+            message: message,
           });
           messageInput.value = "";
         }
       });
 
-      socket.on("chat_message", ({ username, message, timestamp }) => {
-        appendMessage(messages, username, message, timestamp);
-      });
+      // Modificar el manejador de chat_message
+      socket.on(
+        "chat_message",
+        ({ username, message, timestamp, room, senderId }) => {
+          // Solo mostrar el mensaje si estamos en la sala correcta
+          if (room === currentRoom) {
+            appendMessage(messages, username, message, timestamp);
+
+            // Hacer scroll al último mensaje si el emisor es el usuario actual
+            if (senderId === currentUser.id) {
+              messages.scrollTop = messages.scrollHeight;
+            }
+          }
+        }
+      );
 
       // Mensajes privados
       function startPrivateChat(userId, username) {
@@ -369,6 +395,25 @@
         } else {
           typingIndicator.classList.add("hidden");
         }
+      });
+
+      // Modificar el manejador de chat history
+      socket.on("chat history", (messages) => {
+        // Limpiar los mensajes existentes antes de cargar el historial
+        document.getElementById("messages").innerHTML = "";
+
+        messages.forEach((msg) => {
+          appendMessage(
+            document.getElementById("messages"),
+            msg.users.username,
+            msg.message,
+            msg.timestamp
+          );
+        });
+
+        // Hacer scroll al último mensaje
+        document.getElementById("messages").scrollTop =
+          document.getElementById("messages").scrollHeight;
       });
 
       // Función auxiliar para agregar mensajes

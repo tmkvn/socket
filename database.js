@@ -55,15 +55,20 @@ const getMessages = async (roomName) => {
         `
         id,
         message,
-        username,
         timestamp,
         user_id,
-        room_id
+        room_id,
+        users (
+          username
+        ),
+        rooms (
+          name
+        )
       `
       )
-      .eq("room_name", roomName)
+      .eq("rooms.name", roomName)
       .order("timestamp", { ascending: true })
-      .limit(20);
+      .limit(50);
 
     if (error) throw error;
     return data || [];
@@ -73,20 +78,39 @@ const getMessages = async (roomName) => {
   }
 };
 
-const saveMessage = async (userId, roomName, username, message) => {
+const saveMessage = async (userId, roomName, message) => {
   try {
+    // Primero obtenemos el room_id basado en el roomName
+    const { data: roomData, error: roomError } = await supabase
+      .from("rooms")
+      .select("id")
+      .eq("name", roomName)
+      .single();
+
+    if (roomError) throw roomError;
+
+    // Luego guardamos el mensaje
     const { data, error } = await supabase
       .from("messages")
       .insert([
         {
           user_id: userId,
-          room_name: roomName,
-          username,
+          room_id: roomData.id,
           message,
           timestamp: new Date().toISOString(),
         },
       ])
-      .select()
+      .select(
+        `
+        *,
+        users (
+          username
+        ),
+        rooms (
+          name
+        )
+      `
+      )
       .single();
 
     if (error) throw error;

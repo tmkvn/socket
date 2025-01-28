@@ -26,7 +26,6 @@ CREATE TABLE public.messages (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     room_id uuid REFERENCES public.rooms(id),
     user_id uuid REFERENCES public.users(id),
-    username text NOT NULL,
     message text NOT NULL,
     timestamp timestamptz DEFAULT now()
 );

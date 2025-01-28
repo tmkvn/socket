@@ -41,9 +41,9 @@ io.on("connection", (socket) => {
       const rooms = await getRooms();
       socket.emit("rooms_list", rooms);
 
-      // Unirse a la sala general por defecto
-      socket.join("general");
-      const messages = await getMessages("general");
+      // Unirse a la sala general por defecto y cargar mensajes
+      socket.join("General");
+      const messages = await getMessages("General");
       socket.emit("chat history", messages);
     } catch (error) {
       console.error("Error en login:", error);
@@ -52,10 +52,10 @@ io.on("connection", (socket) => {
   });
 
   // Unirse a una sala
-  socket.on("join_room", async (roomId) => {
+  socket.on("join_room", async (roomName) => {
     try {
-      socket.join(roomId);
-      const messages = await getMessages(roomId);
+      socket.join(roomName);
+      const messages = await getMessages(roomName);
       socket.emit("chat history", messages);
     } catch (error) {
       console.error("Error al unirse a la sala:", error);
@@ -102,17 +102,15 @@ io.on("connection", (socket) => {
     try {
       if (!socket.user) return;
 
-      const savedMessage = await saveMessage(
-        socket.user.id,
-        room,
-        socket.user.username,
-        message
-      );
+      const savedMessage = await saveMessage(socket.user.id, room, message);
 
-      io.to(room).emit("chat_message", {
+      // Emitir a todos en la sala, incluyendo el emisor
+      io.in(room).emit("chat_message", {
         username: socket.user.username,
         message: savedMessage.message,
         timestamp: savedMessage.timestamp,
+        room: room,
+        senderId: socket.user.id,
       });
     } catch (error) {
       console.error("Error al enviar mensaje:", error);
