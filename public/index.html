@@ -7,27 +7,77 @@
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-[#36393f] font-sans min-h-screen">
-    <!-- Contenedor Principal con diseño tipo Discord -->
-    <div class="flex h-screen">
-      <!-- Barra lateral de canales (estilo Discord) -->
+    <!-- Modal de inicio de sesión -->
+    <div
+      id="loginModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    >
+      <div class="bg-[#2f3136] p-6 rounded-lg w-96">
+        <h2 class="text-xl text-white font-bold mb-4">Iniciar Sesión</h2>
+        <form id="loginForm" class="space-y-4">
+          <input
+            id="loginUsername"
+            type="text"
+            placeholder="Nombre de usuario"
+            required
+            class="w-full p-3 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            class="w-full bg-[#5865f2] text-white px-6 py-2 rounded-md hover:bg-[#4752c4] transition-colors"
+          >
+            Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <div class="flex h-screen" style="display: none" id="mainContainer">
+      <!-- Barra lateral de canales -->
       <div class="w-60 bg-[#2f3136] text-gray-300 flex flex-col">
         <div class="p-4 border-b border-gray-700">
           <h1 class="text-xl font-bold">Chat Grupal</h1>
         </div>
+
+        <!-- Lista de salas -->
         <div class="p-4">
-          <div class="flex items-center space-x-2">
-            <span class="text-gray-400">#</span>
-            <span>general</span>
-          </div>
+          <h2 class="text-gray-400 text-sm uppercase font-semibold mb-2">
+            Canales
+          </h2>
+          <ul id="roomsList" class="space-y-1">
+            <!-- Las salas se agregarán aquí -->
+          </ul>
+        </div>
+
+        <!-- Lista de usuarios -->
+        <div class="p-4 border-t border-gray-700">
+          <h2 class="text-gray-400 text-sm uppercase font-semibold mb-2">
+            Usuarios en línea
+          </h2>
+          <ul id="usersList" class="space-y-1">
+            <!-- Los usuarios se agregarán aquí -->
+          </ul>
         </div>
       </div>
 
       <!-- Área principal de chat -->
-      <main class="flex-1 flex flex-col h-screen overflow-hidden">
+      <main class="flex-1 flex flex-col h-screen">
         <!-- Encabezado del canal -->
-        <header class="bg-[#36393f] border-b border-gray-700 p-4 shrink-0">
-          <div class="flex items-center">
-            <span class="text-gray-300 text-lg font-semibold"># general</span>
+        <header class="bg-[#36393f] border-b border-gray-700 p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-gray-400">#</span>
+              <span id="currentRoom" class="text-gray-300 text-lg font-semibold"
+                >general</span
+              >
+            </div>
+            <div
+              id="typingIndicator"
+              class="text-gray-400 text-sm italic hidden"
+            >
+              <!-- Indicador de escritura -->
+            </div>
           </div>
         </header>
 
@@ -39,80 +89,290 @@
         </div>
 
         <!-- Área de entrada de mensaje -->
-        <div class="p-4 bg-[#36393f] shrink-0">
-          <form id="form" class="flex flex-col gap-4">
+        <div class="p-4 bg-[#36393f]">
+          <form id="messageForm" class="flex gap-2">
             <input
-              id="username"
-              placeholder="Tu nombre"
+              id="messageInput"
+              autocomplete="off"
+              placeholder="Enviar mensaje"
               required
-              class="w-full p-3 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="flex-1 p-3 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <div class="flex gap-2">
-              <input
-                id="input"
-                autocomplete="off"
-                placeholder="Enviar mensaje a #general"
-                required
-                class="flex-1 p-3 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                class="bg-[#5865f2] text-white px-6 py-2 rounded-md hover:bg-[#4752c4] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Enviar
-              </button>
-            </div>
+            <button
+              type="submit"
+              class="bg-[#5865f2] text-white px-6 py-2 rounded-md hover:bg-[#4752c4] transition-colors"
+            >
+              Enviar
+            </button>
           </form>
         </div>
       </main>
+
+      <!-- Panel de mensajes privados -->
+      <div
+        id="privateChat"
+        class="w-80 bg-[#2f3136] border-l border-gray-700 hidden"
+      >
+        <div class="p-4 border-b border-gray-700">
+          <div class="flex items-center justify-between">
+            <h2 id="privateChatHeader" class="text-gray-300 font-semibold"></h2>
+            <button
+              id="closePrivateChat"
+              class="text-gray-400 hover:text-white"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-hidden">
+          <ul
+            id="privateMessages"
+            class="h-[calc(100vh-180px)] overflow-y-auto p-4 space-y-4"
+          >
+            <!-- Mensajes privados serán añadidos aquí -->
+          </ul>
+        </div>
+        <div class="p-4">
+          <form id="privateMessageForm" class="flex gap-2">
+            <input
+              id="privateMessageInput"
+              autocomplete="off"
+              placeholder="Mensaje privado"
+              required
+              class="flex-1 p-2 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              class="bg-[#5865f2] text-white px-4 py-2 rounded-md hover:bg-[#4752c4] transition-colors"
+            >
+              Enviar
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const socket = io();
-      const form = document.getElementById("form");
-      const input = document.getElementById("input");
-      const username = document.getElementById("username");
+      let currentUser = null;
+      let currentRoom = "general";
+      let currentPrivateChat = null;
+
+      // Elementos DOM
+      const loginModal = document.getElementById("loginModal");
+      const loginForm = document.getElementById("loginForm");
+      const mainContainer = document.getElementById("mainContainer");
+      const messageForm = document.getElementById("messageForm");
+      const messageInput = document.getElementById("messageInput");
       const messages = document.getElementById("messages");
+      const roomsList = document.getElementById("roomsList");
+      const usersList = document.getElementById("usersList");
+      const typingIndicator = document.getElementById("typingIndicator");
+      const privateChat = document.getElementById("privateChat");
+      const privateMessages = document.getElementById("privateMessages");
+      const privateMessageForm = document.getElementById("privateMessageForm");
+      const privateChatHeader = document.getElementById("privateChatHeader");
 
-      // Mostrar historial de mensajes
-      socket.on("chat history", (history) => {
-        history.forEach(({ username, message, timestamp }) => {
-          const li = document.createElement("li");
-          li.classList.add("flex", "items-start", "gap-2");
-          li.innerHTML = `
-            <div class="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-bold">
-              ${username.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-white">${username}</span>
-                <span class="text-xs text-gray-400">${new Date(
-                  timestamp
-                ).toLocaleTimeString()}</span>
-              </div>
-              <p class="text-gray-300">${message}</p>
-            </div>
-          `;
-          messages.appendChild(li);
-        });
-        messages.scrollTop = messages.scrollHeight;
-      });
-
-      // Enviar mensaje al servidor
-      form.addEventListener("submit", (e) => {
+      // Login con manejo de errores
+      loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        if (input.value && username.value) {
-          socket.emit("chat message", {
-            username: username.value,
-            message: input.value,
-          });
-          input.value = "";
+        const username = document.getElementById("loginUsername").value.trim();
+
+        if (username) {
+          try {
+            socket.emit("login", username);
+          } catch (error) {
+            console.error("Error al intentar login:", error);
+            // Mostrar error al usuario
+            const errorDiv = document.createElement("div");
+            errorDiv.className = "text-red-500 text-sm mt-2";
+            errorDiv.textContent =
+              "Error al intentar iniciar sesión. Por favor, intenta de nuevo.";
+            loginForm.appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 3000);
+          }
         }
       });
 
-      // Recibir mensaje del servidor
-      socket.on("chat message", ({ username, message, timestamp }) => {
+      // Manejar respuesta de login
+      socket.on("login_success", (user) => {
+        currentUser = user;
+        loginModal.style.display = "none";
+        mainContainer.style.display = "flex";
+
+        // Mostrar mensaje de bienvenida
+        const welcomeMessage = {
+          username: "Sistema",
+          message: `Bienvenido ${user.username}!`,
+          timestamp: new Date().toISOString(),
+        };
+        appendMessage(
+          messages,
+          welcomeMessage.username,
+          welcomeMessage.message,
+          welcomeMessage.timestamp
+        );
+      });
+
+      socket.on("login_error", (error) => {
+        console.error("Error de login:", error);
+        // Mostrar error al usuario
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "text-red-500 text-sm mt-2";
+        errorDiv.textContent = error.message || "Error al iniciar sesión";
+        loginForm.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 3000);
+      });
+
+      // Manejar conexión de nuevos usuarios
+      socket.on("user_connected", (user) => {
+        // Mostrar mensaje de sistema
+        const systemMessage = {
+          username: "Sistema",
+          message: `${user.username} se ha unido al chat`,
+          timestamp: new Date().toISOString(),
+        };
+        appendMessage(
+          messages,
+          systemMessage.username,
+          systemMessage.message,
+          systemMessage.timestamp
+        );
+
+        // Actualizar lista de usuarios si es necesario
+        socket.emit("get_online_users");
+      });
+
+      // Cargar datos iniciales
+      async function loadInitialData() {
+        socket.emit("join_room", currentRoom);
+        socket.emit("get_rooms");
+        socket.emit("get_online_users");
+      }
+
+      // Manejo de salas
+      socket.on("rooms_list", (rooms) => {
+        roomsList.innerHTML = rooms
+          .map(
+            (room) => `
+          <li class="cursor-pointer hover:bg-[#34373c] p-1 rounded ${
+            room.name === currentRoom ? "bg-[#34373c]" : ""
+          }"
+              onclick="changeRoom('${room.name}')">
+            <div class="flex items-center space-x-2">
+              <span class="text-gray-400">#</span>
+              <span>${room.name}</span>
+            </div>
+          </li>
+        `
+          )
+          .join("");
+      });
+
+      function changeRoom(roomName) {
+        socket.emit("leave_room", currentRoom);
+        currentRoom = roomName;
+        socket.emit("join_room", roomName);
+        document.getElementById("currentRoom").textContent = roomName;
+        messages.innerHTML = "";
+      }
+
+      // Manejo de usuarios
+      socket.on("online_users", (users) => {
+        usersList.innerHTML = users
+          .map(
+            (user) => `
+          <li class="flex items-center space-x-2 cursor-pointer hover:bg-[#34373c] p-1 rounded"
+              onclick="startPrivateChat('${user.id}', '${user.username}')">
+            <div class="w-2 h-2 rounded-full ${
+              user.status === "online" ? "bg-green-500" : "bg-gray-500"
+            }"></div>
+            <span>${user.username}</span>
+          </li>
+        `
+          )
+          .join("");
+      });
+
+      // Mensajes públicos
+      messageForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (messageInput.value.trim()) {
+          socket.emit("chat_message", {
+            room: currentRoom,
+            message: messageInput.value,
+          });
+          messageInput.value = "";
+        }
+      });
+
+      socket.on("chat_message", ({ username, message, timestamp }) => {
+        appendMessage(messages, username, message, timestamp);
+      });
+
+      // Mensajes privados
+      function startPrivateChat(userId, username) {
+        if (userId === currentUser.id) return;
+        currentPrivateChat = { id: userId, username };
+        privateChatHeader.textContent = username;
+        privateChat.classList.remove("hidden");
+        socket.emit("get_private_messages", userId);
+      }
+
+      document
+        .getElementById("closePrivateChat")
+        .addEventListener("click", () => {
+          privateChat.classList.add("hidden");
+          currentPrivateChat = null;
+          privateMessages.innerHTML = "";
+        });
+
+      privateMessageForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (currentPrivateChat && privateMessageInput.value.trim()) {
+          socket.emit("private_message", {
+            receiverId: currentPrivateChat.id,
+            message: privateMessageInput.value,
+          });
+          privateMessageInput.value = "";
+        }
+      });
+
+      socket.on(
+        "private_message",
+        ({ senderId, senderUsername, message, timestamp }) => {
+          if (
+            currentPrivateChat &&
+            (senderId === currentPrivateChat.id || senderId === currentUser.id)
+          ) {
+            appendMessage(privateMessages, senderUsername, message, timestamp);
+          }
+        }
+      );
+
+      // Indicador de escritura
+      let typingTimeout;
+      messageInput.addEventListener("input", () => {
+        clearTimeout(typingTimeout);
+        socket.emit("typing", { room: currentRoom, isTyping: true });
+
+        typingTimeout = setTimeout(() => {
+          socket.emit("typing", { room: currentRoom, isTyping: false });
+        }, 1000);
+      });
+
+      socket.on("user_typing", ({ username, isTyping }) => {
+        if (isTyping) {
+          typingIndicator.textContent = `${username} está escribiendo...`;
+          typingIndicator.classList.remove("hidden");
+        } else {
+          typingIndicator.classList.add("hidden");
+        }
+      });
+
+      // Función auxiliar para agregar mensajes
+      function appendMessage(container, username, message, timestamp) {
         const li = document.createElement("li");
         li.classList.add("flex", "items-start", "gap-2");
         li.innerHTML = `
@@ -129,9 +389,9 @@
             <p class="text-gray-300">${message}</p>
           </div>
         `;
-        messages.appendChild(li);
-        messages.scrollTop = messages.scrollHeight;
-      });
+        container.appendChild(li);
+        container.scrollTop = container.scrollHeight;
+      }
     </script>
   </body>
 </html>
