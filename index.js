@@ -13,6 +13,7 @@ const {
   savePrivateMessage,
   getOrCreateUser,
 } = require("./database");
+const { supabase } = require("./supabase");
 
 const app = express();
 const server = http.createServer(app);
@@ -101,17 +102,15 @@ io.on("connection", (socket) => {
   // Obtener usuarios en línea
   socket.on("get_online_users", async () => {
     try {
-      const sockets = await io.fetchSockets();
-      const onlineUsers = sockets
-        .filter((s) => s.user)
-        .map((s) => ({
-          id: s.user.id,
-          username: s.user.username,
-          status: "online",
-        }));
-      socket.emit("online_users", onlineUsers);
+      const { data: allUsers } = await supabase
+        .from("users")
+        .select("*")
+        .order("status", { ascending: false })
+        .order("username", { ascending: true });
+
+      socket.emit("online_users", allUsers);
     } catch (error) {
-      console.error("Error al obtener usuarios en línea:", error);
+      console.error("Error al obtener usuarios:", error);
       socket.emit("error", { message: "Error al obtener usuarios" });
     }
   });
@@ -204,7 +203,11 @@ io.on("connection", (socket) => {
     if (socket.user) {
       try {
         await updateUserStatus(socket.user.id, "offline");
-        io.emit("user_disconnected", socket.user.id);
+        io.emit("user_disconnected", {
+          userId: socket.user.id,
+          username: socket.user.username,
+          lastSeen: new Date().toISOString(),
+        });
       } catch (error) {
         console.error("Error al actualizar estado de desconexión:", error);
       }

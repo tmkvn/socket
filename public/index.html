@@ -290,21 +290,56 @@
         socket.emit("join_room", roomName);
       }
 
-      // Manejo de usuarios
+      // Modificar el manejo de usuarios
       socket.on("online_users", (users) => {
         usersList.innerHTML = users
-          .map(
-            (user) => `
-          <li class="flex items-center space-x-2 cursor-pointer hover:bg-[#34373c] p-1 rounded"
-              onclick="startPrivateChat('${user.id}', '${user.username}')">
-            <div class="w-2 h-2 rounded-full ${
-              user.status === "online" ? "bg-green-500" : "bg-gray-500"
-            }"></div>
-            <span>${user.username}</span>
-          </li>
-        `
-          )
+          .map((user) => {
+            const isOnline = user.status === "online";
+            const lastSeenText = user.last_seen
+              ? `Última vez: ${new Date(user.last_seen).toLocaleString()}`
+              : "";
+
+            return `
+              <li class="flex flex-col p-2 hover:bg-[#34373c] rounded cursor-pointer"
+                  onclick="startPrivateChat('${user.id}', '${user.username}')">
+                <div class="flex items-center space-x-2">
+                  <div class="w-2 h-2 rounded-full ${
+                    isOnline ? "bg-green-500" : "bg-gray-500"
+                  }"></div>
+                  <span class="text-gray-300">${user.username}</span>
+                </div>
+                ${
+                  !isOnline && lastSeenText
+                    ? `
+                  <div class="text-xs text-gray-500 ml-4">
+                    ${lastSeenText}
+                  </div>
+                `
+                    : ""
+                }
+              </li>
+            `;
+          })
           .join("");
+      });
+
+      // Modificar el manejo de desconexión de usuarios
+      socket.on("user_disconnected", (data) => {
+        // Actualizar la lista de usuarios
+        socket.emit("get_online_users");
+
+        // Mostrar mensaje de sistema
+        const systemMessage = {
+          username: "Sistema",
+          message: `${data.username} se ha desconectado`,
+          timestamp: new Date().toISOString(),
+        };
+        appendMessage(
+          messages,
+          systemMessage.username,
+          systemMessage.message,
+          systemMessage.timestamp
+        );
       });
 
       // Modificar el envío de mensajes
