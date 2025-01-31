@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.18.3/index.js" type="module"></script>
+    <style>
+      emoji-picker {
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        margin-bottom: 0.5rem;
+        display: none;
+      }
+      emoji-picker.visible {
+        display: block;
+      }
+    </style>
   </head>
   <body class="bg-[#36393f] font-sans min-h-screen">
     <!-- Modal de inicio de sesión -->
@@ -83,21 +96,31 @@
 
         <!-- Área de mensajes -->
         <div class="flex-1 overflow-hidden">
-          <ul id="messages" class="h-full overflow-y-auto p-4 space-y-4">
+          <ul id="messages" class="h-full overflow-y-auto p-4 space-y-2">
             <!-- Mensajes serán añadidos aquí -->
           </ul>
         </div>
 
         <!-- Área de entrada de mensaje -->
         <div class="p-4 bg-[#36393f]">
-          <form id="messageForm" class="flex gap-2">
-            <input
-              id="messageInput"
-              autocomplete="off"
-              placeholder="Enviar mensaje"
-              required
-              class="flex-1 p-3 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <form id="messageForm" class="flex gap-2 relative">
+            <div class="flex-1 flex items-center gap-2 bg-[#40444b] rounded-md">
+              <input
+                id="messageInput"
+                autocomplete="off"
+                placeholder="Enviar mensaje"
+                required
+                class="flex-1 p-3 bg-transparent text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
+              />
+              <button
+                type="button"
+                id="emojiButton"
+                class="px-3 text-gray-400 hover:text-gray-200"
+              >
+                😊
+              </button>
+              <emoji-picker id="emojiPicker"></emoji-picker>
+            </div>
             <button
               type="submit"
               class="bg-[#5865f2] text-white px-6 py-2 rounded-md hover:bg-[#4752c4] transition-colors"
@@ -127,20 +150,30 @@
         <div class="flex-1 overflow-hidden">
           <ul
             id="privateMessages"
-            class="h-[calc(100vh-180px)] overflow-y-auto p-4 space-y-4"
+            class="h-[calc(100vh-180px)] overflow-y-auto p-4 space-y-2"
           >
             <!-- Mensajes privados serán añadidos aquí -->
           </ul>
         </div>
         <div class="p-4">
-          <form id="privateMessageForm" class="flex gap-2">
-            <input
-              id="privateMessageInput"
-              autocomplete="off"
-              placeholder="Mensaje privado"
-              required
-              class="flex-1 p-2 rounded-md bg-[#40444b] text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <form id="privateMessageForm" class="flex gap-2 relative">
+            <div class="flex-1 flex items-center gap-2 bg-[#40444b] rounded-md">
+              <input
+                id="privateMessageInput"
+                autocomplete="off"
+                placeholder="Mensaje privado"
+                required
+                class="flex-1 p-2 bg-transparent text-gray-200 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
+              />
+              <button
+                type="button"
+                id="privateEmojiButton"
+                class="px-3 text-gray-400 hover:text-gray-200"
+              >
+                😊
+              </button>
+              <emoji-picker id="privateEmojiPicker"></emoji-picker>
+            </div>
             <button
               type="submit"
               class="bg-[#5865f2] text-white px-4 py-2 rounded-md hover:bg-[#4752c4] transition-colors"
@@ -173,6 +206,34 @@
       const privateMessages = document.getElementById("privateMessages");
       const privateMessageForm = document.getElementById("privateMessageForm");
       const privateChatHeader = document.getElementById("privateChatHeader");
+
+      // Configuración de emoji picker
+      const emojiButton = document.getElementById("emojiButton");
+      const emojiPicker = document.getElementById("emojiPicker");
+      const privateEmojiButton = document.getElementById("privateEmojiButton");
+      const privateEmojiPicker = document.getElementById("privateEmojiPicker");
+
+      function setupEmojiPicker(button, picker, input) {
+        button.addEventListener("click", () => {
+          picker.classList.toggle("visible");
+        });
+
+        picker.addEventListener("emoji-click", (event) => {
+          input.value += event.detail.unicode;
+          picker.classList.remove("visible");
+          input.focus();
+        });
+
+        // Cerrar el picker cuando se hace clic fuera
+        document.addEventListener("click", (event) => {
+          if (!button.contains(event.target) && !picker.contains(event.target)) {
+            picker.classList.remove("visible");
+          }
+        });
+      }
+
+      setupEmojiPicker(emojiButton, emojiPicker, messageInput);
+      setupEmojiPicker(privateEmojiButton, privateEmojiPicker, privateMessageInput);
 
       // Login con manejo de errores
       loginForm.addEventListener("submit", async (e) => {
@@ -295,28 +356,28 @@
         usersList.innerHTML = users
           .map((user) => {
             const isOnline = user.status === "online";
-            const lastSeenText = user.last_seen
-              ? `Última vez: ${new Date(user.last_seen).toLocaleString()}`
-              : "";
+            let lastSeenText = "";
+            
+            if (!isOnline && user.last_seen) {
+              lastSeenText = formatRelativeTime(user.last_seen);
+            }
 
             return `
               <li class="flex flex-col p-2 hover:bg-[#34373c] rounded cursor-pointer"
                   onclick="startPrivateChat('${user.id}', '${user.username}')">
-                <div class="flex items-center space-x-2">
-                  <div class="w-2 h-2 rounded-full ${
-                    isOnline ? "bg-green-500" : "bg-gray-500"
-                  }"></div>
-                  <span class="text-gray-300">${user.username}</span>
-                </div>
-                ${
-                  !isOnline && lastSeenText
-                    ? `
-                  <div class="text-xs text-gray-500 ml-4">
-                    ${lastSeenText}
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 rounded-full ${
+                      isOnline ? "bg-green-500" : "bg-gray-500"
+                    }"></div>
+                    <span class="text-gray-300">${user.username}</span>
                   </div>
-                `
-                    : ""
-                }
+                  ${
+                    !isOnline && lastSeenText
+                      ? `<div class="text-xs text-gray-500">última vez ${lastSeenText}</div>`
+                      : ""
+                  }
+                </div>
               </li>
             `;
           })
@@ -485,31 +546,125 @@
           document.getElementById("messages").scrollHeight;
       });
 
-      // Función auxiliar para agregar mensajes
+      // Función para formatear tiempo relativo
+      function formatRelativeTime(timestamp) {
+        const now = new Date();
+        const date = new Date(timestamp);
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        const diffInDays = Math.floor(diffInHours / 24);
+        const diffInWeeks = Math.floor(diffInDays / 7);
+        const diffInMonths = Math.floor(diffInDays / 30);
+        const diffInYears = Math.floor(diffInDays / 365);
+
+        // Para mensajes recientes (menos de 1 hora), mostrar minutos
+        if (diffInMinutes < 1) {
+          return "ahora";
+        } else if (diffInMinutes < 60) {
+          return `hace ${diffInMinutes} ${diffInMinutes === 1 ? 'minuto' : 'minutos'}`;
+        }
+        
+        // Para mensajes del mismo día, mostrar hace X horas
+        else if (diffInHours < 24) {
+          return `hace ${diffInHours} ${diffInHours === 1 ? 'hora' : 'horas'}`;
+        }
+        
+        // Para mensajes de la última semana, mostrar días
+        else if (diffInDays < 7) {
+          return `hace ${diffInDays} ${diffInDays === 1 ? 'día' : 'días'}`;
+        }
+        
+        // Para mensajes del último mes, mostrar semanas
+        else if (diffInWeeks < 4) {
+          return `hace ${diffInWeeks} ${diffInWeeks === 1 ? 'semana' : 'semanas'}`;
+        }
+        
+        // Para mensajes del último año, mostrar meses
+        else if (diffInMonths < 12) {
+          return `hace ${diffInMonths} ${diffInMonths === 1 ? 'mes' : 'meses'}`;
+        }
+        
+        // Para mensajes más antiguos, mostrar años
+        else {
+          return `hace ${diffInYears} ${diffInYears === 1 ? 'año' : 'años'}`;
+        }
+      }
+
+      // Función para formatear la hora (para mensajes del mismo día)
+      function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+      }
+
       function appendMessage(container, username, message, timestamp) {
         const li = document.createElement("li");
-        li.classList.add("flex", "items-start", "gap-2", "mb-4");
-
+        const isPrivateChat = container.id === "privateMessages";
         const isCurrentUser = username === currentUser.username;
+        const timeString = formatRelativeTime(timestamp);
 
-        li.innerHTML = `
-          <div class="flex ${
-            isCurrentUser ? "ml-auto" : ""
-          } items-start gap-2 max-w-[80%]">
-            <div class="w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center text-white text-sm flex-shrink-0">
-              ${username.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-white">${username}</span>
-                <span class="text-xs text-gray-400">${new Date(
-                  timestamp
-                ).toLocaleTimeString()}</span>
-              </div>
-              <p class="text-gray-300 break-words">${message}</p>
-            </div>
-          </div>
-        `;
+        if (isPrivateChat) {
+          // Estilo WhatsApp para mensajes privados
+          li.className = `flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'} mb-2`;
+          
+          const messageContent = document.createElement("div");
+          messageContent.className = `max-w-[70%] rounded-lg p-3 ${
+            isCurrentUser 
+              ? 'bg-[#5865f2] text-white rounded-tr-none' 
+              : 'bg-[#40444b] text-gray-200 rounded-tl-none'
+          }`;
+
+          const messageText = document.createElement("div");
+          messageText.className = "break-words";
+          messageText.textContent = message;
+
+          const timeSpan = document.createElement("div");
+          timeSpan.className = "text-xs opacity-70 mt-1";
+          timeSpan.textContent = timeString;
+
+          messageContent.appendChild(messageText);
+          messageContent.appendChild(timeSpan);
+          li.appendChild(messageContent);
+        } else {
+          // Mantener el estilo Discord para mensajes de canal
+          li.className = "flex flex-col text-gray-200";
+
+          const messageContent = document.createElement("div");
+          messageContent.className = "flex items-start gap-2";
+
+          const userAvatar = document.createElement("div");
+          userAvatar.className = "w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center flex-shrink-0";
+          userAvatar.textContent = username.charAt(0).toUpperCase();
+
+          const textContent = document.createElement("div");
+          textContent.className = "flex-1";
+
+          const userHeader = document.createElement("div");
+          userHeader.className = "flex items-center gap-2";
+
+          const usernameSpan = document.createElement("span");
+          usernameSpan.className = "font-semibold";
+          usernameSpan.textContent = username;
+
+          const timeSpan = document.createElement("span");
+          timeSpan.className = "text-xs text-gray-400";
+          timeSpan.textContent = timeString;
+
+          const messageText = document.createElement("div");
+          messageText.className = "text-gray-300 break-words";
+          messageText.textContent = message;
+
+          userHeader.appendChild(usernameSpan);
+          userHeader.appendChild(timeSpan);
+          textContent.appendChild(userHeader);
+          textContent.appendChild(messageText);
+
+          messageContent.appendChild(userAvatar);
+          messageContent.appendChild(textContent);
+          li.appendChild(messageContent);
+        }
 
         container.appendChild(li);
         container.scrollTop = container.scrollHeight;
