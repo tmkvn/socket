@@ -137,13 +137,20 @@ const getPrivateMessages = async (userId1, userId2) => {
   try {
     const { data, error } = await supabase
       .from("private_messages")
-      .select("*")
-      .or(`sender_id.eq.${userId1},receiver_id.eq.${userId1}`)
-      .or(`sender_id.eq.${userId2},receiver_id.eq.${userId2}`)
+      .select(
+        `
+        *,
+        sender:sender_id(username),
+        receiver:receiver_id(username)
+      `
+      )
+      .or(
+        `and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`
+      )
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error("Error al recuperar mensajes privados:", error.message);
     throw error;

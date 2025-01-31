@@ -375,9 +375,15 @@
       // Mensajes privados
       function startPrivateChat(userId, username) {
         if (userId === currentUser.id) return;
+
+        // Limpiar mensajes anteriores
+        privateMessages.innerHTML = "";
+
         currentPrivateChat = { id: userId, username };
         privateChatHeader.textContent = username;
         privateChat.classList.remove("hidden");
+
+        // Cargar mensajes privados
         socket.emit("get_private_messages", userId);
       }
 
@@ -391,23 +397,51 @@
 
       privateMessageForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        if (currentPrivateChat && privateMessageInput.value.trim()) {
+        const message = privateMessageInput.value.trim();
+
+        if (currentPrivateChat && message) {
           socket.emit("private_message", {
             receiverId: currentPrivateChat.id,
-            message: privateMessageInput.value,
+            message: message,
           });
           privateMessageInput.value = "";
         }
       });
 
+      socket.on("private_messages_history", (messages) => {
+        privateMessages.innerHTML = "";
+        messages.forEach((msg) => {
+          const username =
+            msg.sender_id === currentUser.id
+              ? currentUser.username
+              : msg.sender.username;
+          appendMessage(privateMessages, username, msg.content, msg.created_at);
+        });
+        // Scroll al último mensaje
+        privateMessages.scrollTop = privateMessages.scrollHeight;
+      });
+
       socket.on(
         "private_message",
         ({ senderId, senderUsername, message, timestamp }) => {
+          // Mostrar el mensaje si el chat privado está abierto con este usuario
           if (
             currentPrivateChat &&
             (senderId === currentPrivateChat.id || senderId === currentUser.id)
           ) {
             appendMessage(privateMessages, senderUsername, message, timestamp);
+            privateMessages.scrollTop = privateMessages.scrollHeight;
+          }
+
+          // Si el chat no está abierto y recibimos un mensaje, mostrar alguna notificación
+          if (!currentPrivateChat && senderId !== currentUser.id) {
+            // Aquí podrías agregar una notificación visual
+            const userItem = document.querySelector(
+              `[onclick="startPrivateChat('${senderId}', '${senderUsername}')"]`
+            );
+            if (userItem) {
+              userItem.style.backgroundColor = "#4a4d52"; // Highlight para indicar mensaje nuevo
+            }
           }
         }
       );
@@ -454,21 +488,29 @@
       // Función auxiliar para agregar mensajes
       function appendMessage(container, username, message, timestamp) {
         const li = document.createElement("li");
-        li.classList.add("flex", "items-start", "gap-2");
+        li.classList.add("flex", "items-start", "gap-2", "mb-4");
+
+        const isCurrentUser = username === currentUser.username;
+
         li.innerHTML = `
-          <div class="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-bold">
-            ${username.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-semibold text-white">${username}</span>
-              <span class="text-xs text-gray-400">${new Date(
-                timestamp
-              ).toLocaleTimeString()}</span>
+          <div class="flex ${
+            isCurrentUser ? "ml-auto" : ""
+          } items-start gap-2 max-w-[80%]">
+            <div class="w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center text-white text-sm flex-shrink-0">
+              ${username.charAt(0).toUpperCase()}
             </div>
-            <p class="text-gray-300">${message}</p>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-white">${username}</span>
+                <span class="text-xs text-gray-400">${new Date(
+                  timestamp
+                ).toLocaleTimeString()}</span>
+              </div>
+              <p class="text-gray-300 break-words">${message}</p>
+            </div>
           </div>
         `;
+
         container.appendChild(li);
         container.scrollTop = container.scrollHeight;
       }
