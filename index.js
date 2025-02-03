@@ -37,7 +37,6 @@ function convertirConEmojis(text) {
 
 // Manejar conexión de usuarios con Socket.IO
 io.on("connection", (socket) => {
-  // Login simplificado
   socket.on("login", async (username) => {
     try {
       console.log("Un usuario se conectó");
